@@ -24,7 +24,7 @@ string read_file (const char* filename) {
 };
 
 
-void toNumbers (string name, string bs) { 
+void to_numbers (string name, string bs) { 
 	// преобразуем битовую шкалу в читаемый вид
 	int counter = -1;
 
@@ -44,13 +44,13 @@ int main(int argc, char **argv) {
     // создаем bitset на 32 бита и храним в нем множество А из файла а
     // работаем с битовыми шкалами, числа читаются справа налево
     bitset <32> A (read_file("a.txt")); 
-    toNumbers("A", A.to_string()); 
+    to_numbers("A", A.to_string()); 
 
     bitset <32> B (read_file("b.txt")); // В из в
-    toNumbers("B", B.to_string());
+    to_numbers("B", B.to_string());
 
     bitset <32> C (read_file("c.txt")); // C из с
-    toNumbers("C", C.to_string());
+    to_numbers("C", C.to_string());
 
     // 9. A ∩ B \ -(C U B) задача
     //   (A & B) & ~(~C & ~B)
@@ -73,8 +73,11 @@ int main(int argc, char **argv) {
     Результат с текущими множествами 01000000000000000000000000000000 (30), 
     проверил через LaTeX, совпадает */
 
-    bitset <32> U (A | B | C); // универсальное множество
-    bitset <32> R = ((A & B) & ~((U & ~C) & (U & ~B)));
-    toNumbers("RESULT", R.to_string());
+    bitset <32> AB (A | B);
+    cout << AB << endl;
+
+    // bitset <32> U (A | B | C); // универсальное множество
+    // bitset <32> R = ((A & B) & ~((U & ~C) & (U & ~B)));
+    // to_numbers("RESULT", R.to_string());
     return 0;
 }
