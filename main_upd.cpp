@@ -6,32 +6,79 @@ using namespace std;
 
 class BitScale {
 	private:
+		string name;
 		string string_set;
-		unsigned long val;
+		unsigned long value;
 	public:
-		BitScale( string path){
-			string_set = path;
-		};
-};
+		BitScale(string _name, const char * path) {
+			name = _name;
+			FILE *f = fopen(path, "r");
+			char c;
+			string s; 
+			if (f == NULL) { 
+				printf("%s\n","File not found!");
+			} else {
+				while ((c = fgetc(f)) != EOF) {
+					if (c != ' ') {
+					    s += c;
+					} 
+				}
+			}
+			fclose(f);
+			string_set = s;
+			// преобразовать бинарную строку в число
+		    char * ptr;
+		    value = strtol(string_set.c_str(), & ptr, 2);
+		}
 
+		BitScale (string _name, unsigned long _val) {
+			name = _name;
+			value = _val;
+		}
 
-string read_file (const char* filename) { 
-    // функция чтения файла с множеством (нули и единицы с пробелами)
-    FILE *f = fopen(filename, "r");
-    char c;
-    string s; 
-    if (f == NULL) { 
-        printf("%s\n","File not found!");
-    } else {
-        while ((c = fgetc(f)) != EOF) {
-            if (c != ' ') {
-                s += c;
-            } 
-        }
-    }
-    fclose(f);
-    return s;
+		void show() {
+			printf("%s = %s", name.c_str(), string_set.c_str());
+					// преобразуем битовую шкалу в читаемый вид
+			int val = -1;
+			printf(" { ");
+			for (int i = string_set.size() - 1; i > -1; --i) {
+				val++;
+				if (string_set[i] == '1') {
+					printf("%d ", val);;
+				}
+			}
+			printf("}\n");
+		}
+
+		unsigned long get_value () {
+			return value;
+		}
+
+		void union_with (BitScale another) {
+			// объединение множеств
+			value |= another.get_value();
+		}
+
+		void intersect_with (BitScale another) {
+			// пересечение множеств
+			value &= another.get_value();
+		}
+
+		void difference_with (BitScale another) {
+			// разность множеств
+			value = value & ~another.get_value();
+		}
+
+		void inverse_set (unsigned long u) {
+			// отрицание (дополнение)
+			value =  u & ~value;
+		}
 };
+		
+unsigned long create_u (BitScale a, BitScale b, BitScale c) {
+	// создать универсальное множество (для отрицания множества)
+	return a.get_value() | b.get_value() | c.get_value();
+}
 
 void convert_to_binary(unsigned long n) {
 	// привести десятичное число к бинарному
@@ -41,78 +88,52 @@ void convert_to_binary(unsigned long n) {
     printf("%ld", n % 2);
 }
 
-void show_items (string name, string value) { 
-	// преобразуем битовую шкалу в читаемый вид
-	int val = -1;
-	int res[32], indx = 0;
-	
-	printf("%s = { ", name.c_str());
-	for (int i = value.size() - 1; i > -1; --i)
-	{
-		val++;
-		if (value[i] == '1') {
-			indx++;
-			printf("%d ", val);;
+
+
+class BitScaleManipulator {
+	public:
+		unsigned long union_of_sets (BitScale a, BitScale b) {
+			// объединение множеств
+			return a.get_value() | b.get_value();
 		}
-	}
-	printf("}\n");
-}
 
-unsigned long convert_to_number(string str) {
-	// преобразовать бинарную строку в число
-    char * ptr;
-    unsigned long parsed = strtol(str.c_str(), & ptr, 2);
-    return parsed;
-}
+		unsigned long intersection_of_sets (BitScale a, BitScale b) {
+			// пересечение множеств
+			return a.get_value() & b.get_value();
+		}
 
-unsigned long union_of_sets (unsigned long a, unsigned long b) {
-	// объединение множеств
-	return a | b;
-}
+		unsigned long difference_of_sets (BitScale a, BitScale b) {
+			// разность множеств
+			return a.get_value() & ~b.get_value();
+		}
 
-unsigned long intersection_of_sets (unsigned long a, unsigned long b) {
-	// пересечение множеств
-	return a & b;
-}
+		unsigned long inverse_set (unsigned long u, BitScale a) {
+			// отрицание (дополнение)
+			return u & ~(a.get_value());
+		}
 
-unsigned long difference_of_sets (unsigned long a, unsigned long b) {
-	// разность множеств
-	return a & ~b;
-}
+		unsigned long create_u (BitScale a, BitScale b, BitScale c) {
+			// создать универсальное множество (для отрицания множества)
+			return a.get_value() | b.get_value() | c.get_value();
+		}
 
-unsigned long inverse_set (unsigned long u, unsigned long a) {
-	// отрицание (дополнение)
-	return u & ~a;
-}
-
-unsigned long create_u (unsigned long a, unsigned long b, unsigned long c) {
-	// создать универсальное множество (для отрицания множества)
-	return a | b | c;
-}
+		void convert_to_binary(unsigned long n) {
+			// привести десятичное число к бинарному
+		    if (n / 2 != 0) {
+		        convert_to_binary(n / 2);
+		    }
+		    printf("%ld", n % 2);
+		}
+};
 
 int main() {
-	string sA, sB, sC; // строки битовых шкал
-	unsigned long ulA, ulB, ulC; // числовые значения
+	BitScale A ("A", "a.txt");
+	BitScale B ("B", "b.txt");
+	BitScale C ("C", "c.txt");
 
-	sA = read_file("a.txt");
-	sB = read_file("b.txt");
-	sC = read_file("c.txt");
-	
-	// выводим на экран
-	printf("A = %s\n", sA.c_str());
-	printf("B = %s\n", sB.c_str());
-	printf("C = %s\n", sC.c_str());
-	
-	ulA = convert_to_number(sA);
-	show_items("A", sA);
-
-	ulB = convert_to_number(sB);
-	show_items("B", sB);
-
-	ulC = convert_to_number(sC);
-	show_items("C", sC);
-
-	unsigned long ab = union_of_sets(ulA, ulB);
+	A.show();
+	B.show();
+	C.show();
     
     // 9. A ∩ B \ -(C U B) задача
     //   (A & B) & ~(~C & ~B)
@@ -121,22 +142,25 @@ int main() {
     // C = {1, 20, 31}
 
     /* Порядок действий:
-    1. Отрицание С
-    2. Отрицание В
-    3. Пересечение -С и -В
-    4. Пересение A и B
-    5. Разность (4) и (3)
+	    1. Отрицание С
+	    2. Отрицание В
+	    3. Пересечение -С и -В
+	    4. Пересение A и B
+	    5. Разность (4) и (3)
 	*/
 
-	unsigned long U = create_u(ulA, ulB, ulC);
-	unsigned long neg_c = inverse_set(U, ulC);
-	unsigned long neg_b = inverse_set(U, ulB);
-	unsigned long CB = intersection_of_sets(neg_c, neg_b);
-	unsigned long AB = intersection_of_sets(ulA, ulB);
-	unsigned long result = difference_of_sets(AB, CB);
+	BitScaleManipulator bsManipulator;
+	unsigned long U = bsManipulator.create_u(A, B, C);
+	BitScale neg_c ("Negative C", bsManipulator.inverse_set(U, C));
+	BitScale neg_b ("Negative B", bsManipulator.inverse_set(U, B));
+	BitScale CB ("CB", bsManipulator.intersection_of_sets(neg_c, neg_b));
+	BitScale AB ("AB", bsManipulator.intersection_of_sets(A, B));
+	unsigned long result = bsManipulator.difference_of_sets(AB, CB);
 	
+	// printf("%ld\n", result);
+	printf("RESULT = ");
+	bsManipulator.convert_to_binary(result);
 	printf("\n");
-
     return 0;
 }
 
