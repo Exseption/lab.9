@@ -1,88 +1,153 @@
 #include <stdio.h>
-#include <bitset>
-#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <sstream>
+
+#define int_to_str( x ) static_cast< ostringstream & >( \
+	        ( ostringstream() << dec << x ) ).str()
 
 using namespace std;
 
-string read_file (const char* filename) { 
-    // функция чтения файла с множеством (нули и единицы с пробелами)
-    FILE *f = fopen(filename, "r");
-    char c;
-    string s; 
-
-    if (f == NULL) { 
-        printf("%s\n","File not found!");
-    } else {
-        while ((c = fgetc(f)) != EOF) {
-            if (c != ' ') {
-                s += c;
-            } 
-        }
-    }
-    fclose(f);
-    return s;
-};
-
-
-void to_numbers (string name, string bs) { 
-	// преобразуем битовую шкалу в читаемый вид
-	int counter = -1;
-
-    cout << name << " = "<< bs << " ( ";
-	for (int i = bs.size() - 1; i > -1; --i)
-	{
-		counter++;
-		if (bs[i] == '1') {
-			cout << counter << " ";
+class BitScale {
+	private:
+		string name;
+		string string_set;
+		unsigned long value;
+	public:
+		BitScale(string _name, const char * path) {
+			name = _name;
+			FILE *f = fopen(path, "r");
+			char c;
+			string s; 
+			if (f == NULL) { 
+				printf("%s\n","File not found!");
+			} else {
+				while ((c = fgetc(f)) != EOF) {
+					if (c != ' ') {
+					    s += c;
+					} 
+				}
+			}
+			fclose(f);
+			string_set = s;
+			// преобразовать бинарную строку в число
+		    char * ptr;
+		    value = strtol(string_set.c_str(), & ptr, 2);
 		}
+
+		BitScale (string _name, unsigned long _val) {
+			name = _name;
+			value = _val;
+		}
+
+		static void binstr_to_set(string bs) {
+			// преобразуем битовую шкалу в читаемый вид
+			int val = -1;
+			printf(" { ");
+			for (int i = bs.size() - 1; i > -1; --i) {
+				val++;
+				if (bs[i] == '1') {
+					printf("%d ", val);;
+				}
+			}
+			printf("}\n");
+		}
+
+		void show() {
+			printf("%s = %s", name.c_str(), string_set.c_str());
+			binstr_to_set(string_set);
+		}
+
+		unsigned long get_value () {
+			return value;
+		}
+
+		void union_with (BitScale another) {
+			// объединение множеств
+			value |= another.get_value();
+		}
+
+		void intersect_with (BitScale another) {
+			// пересечение множеств
+			value &= another.get_value();
+		}
+
+		void difference_with (BitScale another) {
+			// разность множеств
+			value = value & ~another.get_value();
+		}
+
+		void inverse_set (unsigned long u) {
+			// отрицание (дополнение)
+			value =  u & ~value;
+		}
+};
+		
+unsigned long create_u (BitScale a, BitScale b, BitScale c) {
+	// создать универсальное множество (для отрицания множества)
+	return a.get_value() | b.get_value() | c.get_value();
+}
+
+string convert_to_binary(unsigned long x) {  
+	int c;
+	c = x % 2;
+	x = x / 2;
+	if (x == 0) {
+		return int_to_str(c);
 	}
-	cout << ")" << endl;
+	return convert_to_binary(x) + int_to_str(c);
+}
+
+string get_bin (string value) {
+	// форматировать результат
+	string base = "00000000000000000000000000000000";
+	string prefix = base.substr(0, base.size() - value.size());
+	return prefix + value;
 }
 
 
-int main(int argc, char **argv) {
-    // создаем bitset на 32 бита и храним в нем множество А из файла а
-    // работаем с битовыми шкалами, числа читаются справа налево
-    bitset <32> A (read_file("a.txt")); 
-    to_numbers("A", A.to_string()); 
 
-    bitset <32> B (read_file("b.txt")); // В из в
-    to_numbers("B", B.to_string());
+int main() {
+	BitScale A ("A", "a.txt");
+	BitScale B ("B", "b.txt");
 
-    bitset <32> C (read_file("c.txt")); // C из с
-    to_numbers("C", C.to_string());
+	BitScale C ("C", "c.txt");
 
+	A.show();
+	B.show();
+
+	C.show();
+    
     // 9. A ∩ B \ -(C U B) задача
     //   (A & B) & ~(~C & ~B)
     // A = {0, 1, 17, 30}
     // B = {3, 7 , 30}
     // C = {1, 20, 31}
 
-    // Ненужные комменты удалить
+    /* Порядок действий:
+	    1. Отрицание С
+	    2. Отрицание В
+	    3. Пересечение -С и -В
+	    4. Пересение A и B
+	    5. Разность (4) и (3)
+	*/
 
-    /* Объединение, пересечение, разность, отрицание множеств с помощью bitset 
-    представляются битовыми операциями |, &, &~, ~
-    Немного подзабыл теорию множеств, но
-    отрицание множества, как понимаю, дополнение его до универсального.
-    Универсальное множество здесь то, что содержит элементы всех 
-    трех множеств за исключением своих 
-    (или все эелементы выбранного диапазона 32 бита, 
-    но результат получается так же верным)
-    отрицание дизъюнкции = конъюнкция отрицаний множеств. 
-    
-    Результат с текущими множествами 01000000000000000000000000000000 (30), 
-    проверил через LaTeX, совпадает */
+	unsigned long U = create_u(A, B, C);
+	
+	C.inverse_set(U); // 1.
 
-    bitset <32> AB (A | B);
-    cout << AB << endl;
+	BitScale nB ("nB", "b.txt"); // дополнительный объект для отрицания множества
+	nB.inverse_set(U); // 2.
+	
+	C.intersect_with(nB); // 3.
+	A.intersect_with(B); // 4.
+	A.difference_with(C); // 5.
 
-    // bitset <32> U (A | B | C); // универсальное множество
-    // bitset <32> R = ((A & B) & ~((U & ~C) & (U & ~B)));
-    // to_numbers("RESULT", R.to_string());
+	string string_result = convert_to_binary(A.get_value()); // бинарное представление множества
+	printf("RESULT = %s", get_bin(string_result).c_str() );
+	BitScale::binstr_to_set(string_result);
+
+	system("pause");
     return 0;
 }
-
-
-
-
 
